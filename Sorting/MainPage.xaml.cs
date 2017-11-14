@@ -28,69 +28,147 @@ namespace Sorting
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        private ObservableCollectionNumbers oNumbers = new ObservableCollectionNumbers()
-        {
-            //0,  6,  5,  7,  2,  3,  8,  1,  9,  4,
-            //10, 12, 11, 13, 15, 16, 14, 19, 18, 17,
-            //20, 29, 28, 27, 26, 25, 24, 23, 22, 21,
-            //30
-        };
+        private ObservableCollectionNumbers oNumbers;
         public MainPage()
         {
             this.InitializeComponent();
-            GenerateNumberCollection();
+            oNumbers = new ObservableCollectionNumbers(Dispatcher);
             lvNumbers.ItemsSource = oNumbers;
             DataContext = this;
-
         }
-
-        private void GenerateNumberCollection()
-        {
-            Random rand = new Random();
-            for (int i = 0; i < 250; i++)
-            {
-                oNumbers.Add(new SortingItem() { Value = i});
-            }
-            //oNumbers.Shuffle();
-        }
-
         private async void btInsertionSort_Click(object sender, RoutedEventArgs e)
         {
-            //await ThreadPool.RunAsync( (WorkItem) => SortingAlgorithms.InsertionSortAsync(Dispatcher, oNumbers));
-            await ThreadPool.RunAsync((WorkItem) => oNumbers.InsertionSort(Dispatcher));
+            await ThreadPool.RunAsync((WorkItem) => oNumbers.InsertionSort());
+        }
+        private async void btSelectionSort_Click(object sender, RoutedEventArgs e)
+        {
+            await ThreadPool.RunAsync((WorkItem) => oNumbers.SelectionSort());
+        }
+        private async void btBubbleSort_Click(object sender, RoutedEventArgs e)
+        {
+            await ThreadPool.RunAsync((WorkItem) => oNumbers.BubbleSort());
+        }
+        private async void btQuickSort_Click(object sender, RoutedEventArgs e)
+        {
+            await ThreadPool.RunAsync((WorkItem) => oNumbers.QuickSort());
         }
         private void btShuffle_Click(object sender, RoutedEventArgs e)
         {
             oNumbers.Shuffle();
         }
     }
-    public class ObservableCollectionNumbers : ObservableCollection<SortingItem>, INotifyPropertyChanged
+    public class ObservableCollectionNumbers : ObservableCollection<SortingItem>
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        private CoreDispatcher dispatcher;
+        public ObservableCollectionNumbers(CoreDispatcher dispatcher)
+        {
+            this.dispatcher = dispatcher;
+            GenerateNumberCollection();
+        }
 
         #region Sorts
-        public async void InsertionSort(CoreDispatcher dispatcher)
+        public async void InsertionSort()
         {
-            Debug.WriteLine("----------");
-            Debug.WriteLine("InsertionSort:");
-            Debug.WriteLine("Starting state:");
-            Print();
             for (int i = 1; i < Count; i++)
             {
                 for (int j = i; j > 0 && this[j - 1].Value > this[j].Value; j--)
                 {
-                    await dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
-                    {
-                        Swap(j, j - 1);
-                        //Print();
-                    });
+                    await SwapAndPrint(j, j - 1);
                 }
             }
-            Debug.WriteLine("----------");
+        }
+        public async void SelectionSort()
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                int LowestValue = i;
+                for (int j = i + 1; j < Count; j++)
+                {
+                    if (this[j].Value < this[LowestValue].Value)
+                    {
+                        LowestValue = j;
+                    }
+                }
+                await SwapAndPrint(i, LowestValue);
+            }
+        }
+        public async void BubbleSort()
+        {
+            for (int i = 0; i < Count - 1; i++)
+            {
+                bool Swapped = false;
+                for (int j = 0; j < Count - 1; j++)
+                {
+                    if (this[j].Value > this[j + 1].Value)
+                    {
+                        await SwapAndPrint(j, j + 1);
+                        Swapped = true;
+                    }
+                }
+                if (Swapped == false)
+                {
+                    break;
+                }
+            }
+        }
+        public async void QuickSort()
+        {
+            await Quick(0, Count - 1);
+
+            async Task Quick(int left, int right)
+            {
+                if (right - left <= 0)
+                {
+                    return;
+                }
+                else
+                {
+                    int Pivot = this[right].Value;
+                    int PartitionPoint = await Partition(left, right, Pivot);
+                    await Quick(left, PartitionPoint - 1);
+                    await Quick(PartitionPoint + 1, right);
+                }
+            }
+
+            async Task<int> Partition(int left, int right, int pivot)
+            {
+                int LeftPointer = left - 1;
+                int RightPointer = right;
+
+                while (true)
+                {
+                    while (this[++LeftPointer].Value < pivot)
+                    {
+                        //do nothing
+                    }
+                    while (RightPointer > 0 && this[--RightPointer].Value > pivot)
+                    {
+                        //do nothing
+                    }
+                    if (LeftPointer >= RightPointer)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        await SwapAndPrint(LeftPointer, RightPointer);
+                    }
+                }
+                await SwapAndPrint(LeftPointer, right);
+                return LeftPointer;
+            }
         }
         #endregion
 
         #region Utils
+        private async Task SwapAndPrint(int IndexA, int IndexB)
+        {
+            await dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+            {
+                Swap(IndexA, IndexB);
+                //Print();
+            });
+        }
         public void Print()
         {
             Debug.WriteLine("");
@@ -115,22 +193,31 @@ namespace Sorting
                 Swap(i, randomNumber);
             }
         }
+        public void GenerateNumberCollection()
+        {
+            Random rand = new Random();
+            for (int i = 0; i < 500; i++)
+            {
+                Add(new SortingItem() { Value = i });
+            }
+        }
         #endregion
     }
     public class SortingItem
     {
         private int _Value;
         public int Value { get { return _Value; } set { _Value = value; } }
-        public int Height {
+        public int Height
+        {
             get
             {
                 if (_Value != 0)
                 {
-                    return (400 / 250) * Value;
+                    return (500 / 500) * Value;
                 }
                 else
                 {
-                    return 1;
+                    return 0;
                 }
             }
         }
