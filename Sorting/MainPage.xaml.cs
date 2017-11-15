@@ -139,11 +139,11 @@ namespace Sorting
                 {
                     while (this[++LeftPointer].Value < pivot)
                     {
-                        //do nothing
+                        //Increase leftpointer until value of the leftpointer is lower then the pivot
                     }
                     while (RightPointer > 0 && this[--RightPointer].Value > pivot)
                     {
-                        //do nothing
+                        //Decrease rightpointer until value of the rightpointer is higher then the pivot and is higher then 0
                     }
                     if (LeftPointer >= RightPointer)
                     {
